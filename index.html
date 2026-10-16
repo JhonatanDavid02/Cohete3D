@@ -455,9 +455,10 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.25;
+    renderer.outputEncoding = THREE.sRGBEncoding;
     container.appendChild(renderer.domElement);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -468,14 +469,30 @@
     controls.maxPolarAngle = Math.PI / 2 - 0.04;
     controls.target.copy(cameraTargetLook);
 
+    // Dynamic Environment Reflection Map
+    const pmremGen = new THREE.PMREMGenerator(renderer);
+    pmremGen.compileEquirectangularShader();
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color('#040711');
+    const el1 = new THREE.PointLight('#38bdf8', 14, 20);
+    el1.position.set(8, 12, 8);
+    envScene.add(el1);
+    const el2 = new THREE.PointLight('#f97316', 10, 16);
+    el2.position.set(-8, 6, -8);
+    envScene.add(el2);
+    const el3 = new THREE.PointLight('#ffffff', 8, 14);
+    el3.position.set(0, 15, 0);
+    envScene.add(el3);
+    scene.environment = pmremGen.fromScene(envScene).texture;
+
     // ================= LIGHTING =================
-    const ambLight = new THREE.AmbientLight('#0c162c', 0.8);
+    const ambLight = new THREE.AmbientLight('#0c162c', 0.85);
     scene.add(ambLight);
 
-    const hemiLight = new THREE.HemisphereLight('#1e293b', '#040711', 0.6);
+    const hemiLight = new THREE.HemisphereLight('#1e293b', '#040711', 0.65);
     scene.add(hemiLight);
 
-    const dirKeyLight = new THREE.DirectionalLight('#f1f5f9', 2.4);
+    const dirKeyLight = new THREE.DirectionalLight('#f1f5f9', 2.6);
     dirKeyLight.position.set(14, 20, 12);
     dirKeyLight.castShadow = true;
     dirKeyLight.shadow.mapSize.width = 2048;
@@ -484,9 +501,16 @@
     dirKeyLight.shadow.camera.far = 50;
     scene.add(dirKeyLight);
 
-    const rimLight = new THREE.DirectionalLight('#0284c7', 1.6);
+    const rimLight = new THREE.DirectionalLight('#0284c7', 1.8);
     rimLight.position.set(-12, 10, -10);
     scene.add(rimLight);
+
+    // Platform High-Angle Overhead Spotlight
+    const platformSpot = new THREE.SpotLight('#f8fafc', 5.0, 30, 0.55, 0.8);
+    platformSpot.position.set(0, 16, 0);
+    platformSpot.target.position.set(0, 4, 0);
+    scene.add(platformSpot);
+    scene.add(platformSpot.target);
 
     const flameLight = new THREE.PointLight('#ff5500', 6, 18, 2);
     flameLight.position.set(0, 0.7, 0);
@@ -705,10 +729,22 @@
     rocketGroup.add(tip);
 
     // Cockpit Window with glowing cyan glass
-    const cockpitGlass = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.16, 0.08), new THREE.MeshStandardMaterial({ color: 0x001826, emissive: 0x00d5ff, emissiveIntensity: 0.6 }));
+    const cockpitGlass = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.16, 0.08), new THREE.MeshStandardMaterial({ color: 0x001826, emissive: 0x00d5ff, emissiveIntensity: 0.8 }));
     cockpitGlass.position.set(0, 7.35, 0.65);
     cockpitGlass.rotation.x = 0.2;
     rocketGroup.add(cockpitGlass);
+
+    // Aerospace Mission Stripes (Bold contrast)
+    const stripeOrange = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.8, 0.02), new THREE.MeshStandardMaterial({ color: 0xff4400, roughness: 0.35 }));
+    stripeOrange.position.set(0, 5.7, 0.79);
+    stripeOrange.castShadow = true;
+    rocketGroup.add(stripeOrange);
+
+    const stripeCyan = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.6, 0.02), new THREE.MeshStandardMaterial({ color: 0x0099ff, roughness: 0.35 }));
+    stripeCyan.position.set(0.79, 3.4, 0);
+    stripeCyan.rotation.y = Math.PI / 2;
+    stripeCyan.castShadow = true;
+    rocketGroup.add(stripeCyan);
 
     // 4 Fins
     [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2].forEach(a => {
@@ -737,9 +773,20 @@
     engineNozzle.position.y = 1.55;
     rocketGroup.add(engineNozzle);
 
+    // Regenerative cooling rings around nozzle
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.028, 12, 32), new THREE.MeshStandardMaterial({ color: 0xff5500, roughness: 0.3, metalness: 0.8 }));
+    ring1.position.y = 1.45;
+    ring1.rotation.x = Math.PI / 2;
+    rocketGroup.add(ring1);
+
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.032, 12, 32), new THREE.MeshStandardMaterial({ color: 0x1a1c23, roughness: 0.3, metalness: 0.9 }));
+    ring2.position.y = 1.30;
+    ring2.rotation.x = Math.PI / 2;
+    rocketGroup.add(ring2);
+
     const glowingThroat = new THREE.Mesh(
       new THREE.CylinderGeometry(0.26, 0.32, 0.12, 24),
-      new THREE.MeshStandardMaterial({ color: 0xff7700, emissive: 0xff4400, emissiveIntensity: 2.0 })
+      new THREE.MeshStandardMaterial({ color: 0xff7700, emissive: 0xff4400, emissiveIntensity: 2.5 })
     );
     glowingThroat.position.y = 1.72;
     rocketGroup.add(glowingThroat);
