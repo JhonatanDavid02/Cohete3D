@@ -541,10 +541,10 @@
       scene.add(towerBeacon);
 
       // ================= PROCEDURAL PBR TEXTURES (CANVAS GENERATORS) =================
-      // 1. Fuselage Multi-Map PBR Texture Generator (Thermal coat, welds, LOX frost, rivets, stencils)
-      function generateFuselageTextures() {
-        const width = 2048;
-        const height = 1024;
+      // 1. First Stage Booster Textures (Dedicated 1024x2048: aspect-ratio compensated, ZERO vertical distortion, NO dark bands)
+      function generateBoosterTextures() {
+        const width = 1024;
+        const height = 2048;
 
         // Diffuse Canvas
         const cDiff = document.createElement('canvas');
@@ -552,131 +552,98 @@
         cDiff.height = height;
         const ctx = cDiff.getContext('2d');
 
-        // Base thermal coat: Aerospace off-white with fine vertical aero-stream gradient
+        // Pure Aerospace Thermal White Coating
         const bgGrad = ctx.createLinearGradient(0, 0, width, 0);
-        bgGrad.addColorStop(0.00, '#e8ecf2');
-        bgGrad.addColorStop(0.25, '#f4f7fb');
-        bgGrad.addColorStop(0.50, '#e2e7ee');
-        bgGrad.addColorStop(0.75, '#f8fafc');
-        bgGrad.addColorStop(1.00, '#e8ecf2');
+        bgGrad.addColorStop(0.00, '#edf1f7');
+        bgGrad.addColorStop(0.25, '#f8fafc');
+        bgGrad.addColorStop(0.50, '#e8edf4');
+        bgGrad.addColorStop(0.75, '#fbfcfe');
+        bgGrad.addColorStop(1.00, '#edf1f7');
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, width, height);
 
-        // Subtle vertical panel seams (circumferential divisions)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.04)';
+        // Fine vertical stringer seams (longitudinal stiffeners)
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.035)';
         ctx.lineWidth = 1;
-        for (let x = 0; x < width; x += 128) {
+        for (let x = 0; x < width; x += 64) {
           ctx.beginPath();
           ctx.moveTo(x, 0);
           ctx.lineTo(x, height);
           ctx.stroke();
         }
 
-        // Interstage Carbon-Fiber Composite Band (Y from 360 to 445 out of 1024)
-        const isY1 = 360;
-        const isY2 = 445;
-        ctx.fillStyle = '#11141a';
-        ctx.fillRect(0, isY1, width, isY2 - isY1);
-
-        // Diagonal Twill Carbon Fiber Weave
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-        ctx.lineWidth = 2;
-        for (let x = -height; x < width + height; x += 14) {
-          ctx.beginPath();
-          ctx.moveTo(x, isY1);
-          ctx.lineTo(x + (isY2 - isY1), isY2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(x, isY2);
-          ctx.lineTo(x + (isY2 - isY1), isY1);
-          ctx.stroke();
-        }
-
-        // Ring Weld Seams (Friction Stir Welds) with Double Rivet Lines
-        const weldSeams = [90, 210, 340, 455, 580, 710, 840, 950];
+        // Realistic Tank Dome Friction-Stir Weld Seams (at authentic structural bulkhead heights)
+        const weldSeams = [220, 640, 1060, 1480, 1880];
         weldSeams.forEach(y => {
-          // Titanium/Alloy weld band
-          ctx.fillStyle = 'rgba(175, 190, 210, 0.45)';
-          ctx.fillRect(0, y - 4, width, 8);
-          ctx.strokeStyle = 'rgba(95, 110, 130, 0.65)';
+          // Precision silver-alloy weld band
+          ctx.fillStyle = 'rgba(180, 195, 215, 0.55)';
+          ctx.fillRect(0, y - 3, width, 6);
+          ctx.strokeStyle = 'rgba(100, 115, 135, 0.75)';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(0, y);
           ctx.lineTo(width, y);
           ctx.stroke();
 
-          // Micro-rivet fastener points
-          ctx.fillStyle = 'rgba(65, 80, 100, 0.75)';
-          for (let rx = 8; rx < width; rx += 22) {
-            ctx.fillRect(rx, y - 6, 2, 2);
-            ctx.fillRect(rx + 11, y + 4, 2, 2);
+          // Micro-fasteners
+          ctx.fillStyle = 'rgba(70, 85, 105, 0.8)';
+          for (let rx = 6; rx < width; rx += 18) {
+            ctx.fillRect(rx, y - 5, 2, 2);
+            ctx.fillRect(rx + 9, y + 3, 2, 2);
           }
         });
 
-        // Cryogenic LOX Tank Frost Sublimation Band (Sub-cooled LOX condensation zone)
-        const frostGrad = ctx.createLinearGradient(0, 580, 0, 840);
+        // Cryogenic LOX Tank Frost Sublimation Band (upper-middle liquid oxygen section, y=280 to y=980)
+        // Soft, natural crystalline frost gradient without any dark bands or artifacts
+        const frostGrad = ctx.createLinearGradient(0, 260, 0, 980);
         frostGrad.addColorStop(0.00, 'rgba(255, 255, 255, 0.0)');
-        frostGrad.addColorStop(0.15, 'rgba(255, 255, 255, 0.65)');
-        frostGrad.addColorStop(0.50, 'rgba(255, 255, 255, 0.88)');
-        frostGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.60)');
+        frostGrad.addColorStop(0.12, 'rgba(255, 255, 255, 0.60)');
+        frostGrad.addColorStop(0.48, 'rgba(255, 255, 255, 0.82)');
+        frostGrad.addColorStop(0.82, 'rgba(255, 255, 255, 0.58)');
         frostGrad.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)');
         ctx.fillStyle = frostGrad;
-        ctx.fillRect(0, 580, width, 260);
+        ctx.fillRect(0, 260, width, 720);
 
-        // High-Contrast Optical Roll Tracking Targets (Checkerboard quadrants for tracking cameras)
-        const rollXPositions = [width * 0.12, width * 0.37, width * 0.62, width * 0.87];
+        // Aspect-Ratio Compensated Optical Roll Tracking Targets (Square 2x2 checkerboards)
+        // Physical aspect ratio is height (9.6m) / circumference (2.827m) = 3.4.
+        // Canvas is 1024x2048 (2:1), so in 3D world space vertical is stretched by 3.4 / 2.0 = 1.7x.
+        // We divide canvas height by 1.7 so that on the 3D model it displays as a 100% PERFECT SQUARE!
+        const rollXPositions = [width * 0.125, width * 0.375, width * 0.625, width * 0.875];
         rollXPositions.forEach(cx => {
-          const cy = 180;
-          const s = 34;
-          ctx.fillStyle = '#0f172a';
-          ctx.fillRect(cx - s, cy - s, s, s);
-          ctx.fillRect(cx, cy, s, s);
-          ctx.fillStyle = '#f8fafc';
-          ctx.fillRect(cx, cy - s, s, s);
-          ctx.fillRect(cx - s, cy, s, s);
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(cx - s, cy - s, s * 2, s * 2);
+          [360, 1720].forEach(cy => {
+            const w = 40;
+            const h = Math.round(w / 1.7); // Compensate 1.7x vertical stretch in cylinder UV mapping
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(cx - w, cy - h, w, h);
+            ctx.fillRect(cx, cy, w, h);
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(cx, cy - h, w, h);
+            ctx.fillRect(cx - w, cy, w, h);
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(cx - w, cy - h, w * 2, h * 2);
+          });
         });
 
-        // Mission Markings & Stencils
+        // Crisp Vector-sharp Aerospace Stencils (Aspect-compensated, perfectly sharp)
         ctx.save();
-        ctx.fillStyle = '#0f172a';
-
-        // Booster Mission Stencil Text (Vertical)
         [width * 0.22, width * 0.72].forEach(tx => {
           ctx.save();
-          ctx.translate(tx, 730);
+          ctx.translate(tx, 1420);
           ctx.rotate(-Math.PI / 2);
-          ctx.font = 'bold 26px "Space Grotesk", sans-serif';
+          // Scale along the text direction to negate cylinder UV stretch
+          ctx.scale(1 / 1.7, 1);
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 36px "Space Grotesk", sans-serif';
           ctx.fillText('PAD-07A // ORBITAL VEHICLE', 0, 0);
-          ctx.font = '14px "JetBrains Mono", monospace';
-          ctx.fillText('STAGE 1: 9x VAC/SL ENGINES • LOX / RP-1', 0, 22);
-          ctx.fillText('AV-7014X • DANGER CRYO VENT', 0, 38);
+          ctx.font = '20px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#1e293b';
+          ctx.fillText('STAGE 1: 9x VAC/SL ENGINES • LOX / RP-1', 0, 26);
+          ctx.font = 'bold 16px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#d97706';
+          ctx.fillText('SERNO: AV-7014X  •  DANGER CRYO VENT', 0, 48);
           ctx.restore();
         });
-
-        // Stage 2 Mission Text
-        [width * 0.22, width * 0.72].forEach(tx => {
-          ctx.save();
-          ctx.translate(tx, 310);
-          ctx.rotate(-Math.PI / 2);
-          ctx.font = 'bold 22px "Space Grotesk", sans-serif';
-          ctx.fillText('AEROSPACE DYNAMICS', 0, 0);
-          ctx.font = '12px "JetBrains Mono", monospace';
-          ctx.fillText('STAGE-2 VACUUM INSERTION', 0, 16);
-          ctx.restore();
-        });
-
-        // Hazard Chevron Stripe at Interstage Separation Plane
-        const chevY = isY2 + 2;
-        const numChevs = 36;
-        const chevW = width / numChevs;
-        for (let i = 0; i < numChevs; i++) {
-          ctx.fillStyle = i % 2 === 0 ? '#f59e0b' : '#0f172a';
-          ctx.fillRect(i * chevW, chevY, chevW, 7);
-        }
-
         ctx.restore();
 
         // 2. Bump Map (Raised weld lines & fasteners)
@@ -703,12 +670,12 @@
           bCtx.stroke();
         });
 
-        // 3. Roughness Map (Matte paint, glossy bare-metal welds, rough ice)
+        // 3. Roughness Map (Matte thermal paint, shiny metal welds, rough frost)
         const cRough = document.createElement('canvas');
         cRough.width = width / 2;
         cRough.height = height / 2;
         const rCtx = cRough.getContext('2d');
-        rCtx.fillStyle = '#686868'; // Standard thermal paint roughness (~0.42)
+        rCtx.fillStyle = '#656565'; // Clean thermal paint roughness (~0.40)
         rCtx.fillRect(0, 0, width / 2, height / 2);
 
         // Welds are smoother/shinier metal
@@ -717,9 +684,9 @@
           rCtx.fillRect(0, (y - 3) / 2, width / 2, 3);
         });
 
-        // Cryo frost is rougher/matte
-        rCtx.fillStyle = 'rgba(235, 235, 235, 0.45)';
-        rCtx.fillRect(0, 580 / 2, width / 2, 260 / 2);
+        // Cryo frost is slightly rougher/matte
+        rCtx.fillStyle = 'rgba(230, 230, 230, 0.42)';
+        rCtx.fillRect(0, 260 / 2, width / 2, 720 / 2);
 
         const diffTex = new THREE.CanvasTexture(cDiff);
         diffTex.wrapS = THREE.RepeatWrapping;
@@ -736,7 +703,99 @@
         return { diffTex, bumpTex, roughTex };
       }
 
-      // 2. Engine Nozzle Thermal Anodizing & Regenerative Cooling Texture
+      // 2. Second Stage Dedicated Textures (1024x1024)
+      function generateStage2Textures() {
+        const width = 1024;
+        const height = 1024;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Pure white finish matching Stage 1
+        const bgGrad = ctx.createLinearGradient(0, 0, width, 0);
+        bgGrad.addColorStop(0.00, '#edf1f7');
+        bgGrad.addColorStop(0.50, '#f8fafc');
+        bgGrad.addColorStop(1.00, '#edf1f7');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, width, height);
+
+        // Stage 2 Welds
+        [280, 740].forEach(y => {
+          ctx.fillStyle = 'rgba(180, 195, 215, 0.55)';
+          ctx.fillRect(0, y - 2, width, 4);
+          ctx.strokeStyle = 'rgba(100, 115, 135, 0.7)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        });
+
+        // Stage 2 Mission Stencil Text
+        ctx.save();
+        [width * 0.22, width * 0.72].forEach(tx => {
+          ctx.save();
+          ctx.translate(tx, 540);
+          ctx.rotate(-Math.PI / 2);
+          ctx.scale(1 / 1.2, 1);
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 28px "Space Grotesk", sans-serif';
+          ctx.fillText('AEROSPACE DYNAMICS', 0, 0);
+          ctx.font = '16px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#0284c7';
+          ctx.fillText('STAGE-2 // VACUUM INSERTION', 0, 24);
+          ctx.restore();
+        });
+        ctx.restore();
+
+        const diffTex = new THREE.CanvasTexture(canvas);
+        diffTex.wrapS = THREE.RepeatWrapping;
+        diffTex.wrapT = THREE.ClampToEdgeWrapping;
+        return { diffTex };
+      }
+
+      // 3. Interstage Carbon-Fiber Composite Texture (Dedicated 1024x512)
+      function generateInterstageTexture() {
+        const width = 1024;
+        const height = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Deep charcoal/black carbon composite base
+        ctx.fillStyle = '#0f131a';
+        ctx.fillRect(0, 0, width, height);
+
+        // Diagonal Twill Carbon Fiber Weave
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.lineWidth = 2;
+        for (let x = -height; x < width + height; x += 12) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x + height, height);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x, height);
+          ctx.lineTo(x + height, 0);
+          ctx.stroke();
+        }
+
+        // Yellow and Black Hazard Separation Chevron Stripe at Separation Plane
+        const chevW = width / 32;
+        for (let i = 0; i < 32; i++) {
+          ctx.fillStyle = i % 2 === 0 ? '#f59e0b' : '#0a0d14';
+          ctx.fillRect(i * chevW, height - 14, chevW, 14);
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+        return tex;
+      }
+
+      // 4. Engine Nozzle Thermal Anodizing & Regenerative Cooling Texture
       function generateNozzleTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
@@ -777,7 +836,9 @@
         return tex;
       }
 
-      const { diffTex: fuselageDiff, bumpTex: fuselageBump, roughTex: fuselageRough } = generateFuselageTextures();
+      const { diffTex: boosterDiff, bumpTex: boosterBump, roughTex: boosterRough } = generateBoosterTextures();
+      const { diffTex: stage2Diff } = generateStage2Textures();
+      const interstageTex = generateInterstageTexture();
       const nozzleTex = generateNozzleTexture();
 
       // ================= PARAMETRIC GEOMETRY GENERATORS =================
@@ -919,32 +980,84 @@
         padGroup.add(noz);
       }
 
-      // 4 Animated Hydraulic Hold-down Clamps
+      // Heavy Reinforced Launch Table (Hexagonal steel support ring around flame trench)
+      const launchTableMat = new THREE.MeshStandardMaterial({ color: 0x1e2634, metalness: 0.85, roughness: 0.35 });
+      const launchTableRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.48, 1.65, 0.26, 48),
+        launchTableMat
+      );
+      launchTableRing.position.set(0, 1.54, 0);
+      launchTableRing.castShadow = true;
+      launchTableRing.receiveShadow = true;
+      padGroup.add(launchTableRing);
+
+      // 4 Heavy Load-Bearing Reaction Pylons with Hydraulic Hold-down Clamps
       const clampGroups = [];
-      [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2].forEach((ang) => {
+      const pylonMat = new THREE.MeshStandardMaterial({ color: 0x18202c, metalness: 0.88, roughness: 0.32 });
+      const anvilMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.95, roughness: 0.18 });
+      const clampArmMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.85, roughness: 0.25 });
+      const clampJawMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.92, roughness: 0.2 });
+
+      [Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4].forEach(ang => {
         const cg = new THREE.Group();
-        cg.rotation.y = ang + Math.PI / 4;
+        cg.rotation.y = ang;
 
-        // Base Anchor Block
-        const baseBlock = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.32, 0.52), new THREE.MeshStandardMaterial({ color: 0x242d3d, metalness: 0.85, roughness: 0.3 }));
-        baseBlock.position.set(0, 1.54, 1.18);
-        baseBlock.castShadow = true;
-        cg.add(baseBlock);
+        // 1. Heavy Vertical Pylon Pedestal Base (Direct load path to pad deck)
+        const pylonBase = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.72, 0.34), pylonMat);
+        pylonBase.position.set(0, 1.76, 0.62);
+        pylonBase.castShadow = true;
+        pylonBase.receiveShadow = true;
+        cg.add(pylonBase);
 
-        // Hydraulic Cylinder Arm
-        const hydr = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.42, 16), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.9, roughness: 0.2 }));
-        hydr.position.set(0, 1.78, 1.20);
-        hydr.rotation.x = -0.38;
-        cg.add(hydr);
+        // Diagonal Stiffener Buttress Braces welded to launch table
+        const buttress = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.45, 0.38), pylonMat);
+        buttress.position.set(0, 1.58, 0.82);
+        buttress.rotation.x = 0.55;
+        cg.add(buttress);
 
-        // Clamping Claw Latch (Interfaces with rocket engine skirt base)
-        const claw = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.28), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.92, roughness: 0.2 }));
-        claw.position.set(0, 1.94, 0.98);
-        claw.rotation.x = 0.38;
-        claw.castShadow = true;
-        cg.add(claw);
+        // 2. Machined Hardened Support Anvil (The load-bearing anvil directly beneath rocket shoe)
+        // Top surface at world y = 2.27m, center radius z = 0.49m
+        const anvil = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.18), anvilMat);
+        anvil.position.set(0, 2.19, 0.49);
+        anvil.castShadow = true;
+        anvil.receiveShadow = true;
+        cg.add(anvil);
 
-        cg.userData = { hydr, claw };
+        // 3. Pivoting Hydraulic Hold-Down Clamp Arm Assembly
+        const clawGroup = new THREE.Group();
+        clawGroup.position.set(0, 2.20, 0.64); // Pivot hinge axis
+
+        // Hydraulic Cylinder Housing
+        const cylinderHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.32, 16), clampArmMat);
+        cylinderHousing.position.set(0, -0.10, 0.08);
+        cylinderHousing.rotation.x = -0.35;
+        cg.add(cylinderHousing);
+
+        // Main Clamping Swing Arm Beam
+        const swingArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.10, 0.22), clampArmMat);
+        swingArm.position.set(0, 0.06, -0.06);
+        swingArm.rotation.x = -0.22;
+        swingArm.castShadow = true;
+        clawGroup.add(swingArm);
+
+        // Hardened Gripping Jaw Claw (Extends inward to z = 0.49m, y = 2.34m in closed position)
+        const clawJaw = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.09, 0.14), clampJawMat);
+        clawJaw.position.set(0, 0.14, -0.15);
+        clawJaw.rotation.x = 0.15;
+        clawJaw.castShadow = true;
+        clawGroup.add(clawJaw);
+
+        // Hazard Striped Indicator on Claw Tip
+        const clawTip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.162, 0.02, 0.04),
+          new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.6 })
+        );
+        clawTip.position.set(0, 0.18, -0.20);
+        clawGroup.add(clawTip);
+
+        cg.add(clawGroup);
+        cg.userData = { clawGroup };
+
         padGroup.add(cg);
         clampGroups.push(cg);
       });
@@ -1055,27 +1168,27 @@
       // 1. Upper Stage Cryogenic Fuel & Telemetry Arm (at y = 14.8m)
       const upperArmGroup = new THREE.Group();
       upperArmGroup.position.set(0.65, 14.8, 0.55);
-      const upperBeam = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.16, 0.22), new THREE.MeshStandardMaterial({ color: 0x3b475a, metalness: 0.85, roughness: 0.3 }));
-      upperBeam.position.set(1.25, 0, 0.1);
-      upperBeam.rotation.y = -0.18;
+      const upperBeam = new THREE.Mesh(new THREE.BoxGeometry(1.98, 0.16, 0.22), new THREE.MeshStandardMaterial({ color: 0x3b475a, metalness: 0.85, roughness: 0.3 }));
+      upperBeam.position.set(0.99, 0, 0.118);
+      upperBeam.rotation.y = -0.118;
       upperBeam.castShadow = true;
       upperArmGroup.add(upperBeam);
-      // Umbilical Quick-Disconnect Plate
-      const upperQD = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.32), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.9 }));
-      upperQD.position.set(2.45, 0, 0.32);
+      // Umbilical Quick-Disconnect Plate (Flush contact against rocket skin at x = -0.45m)
+      const upperQD = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.28), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.9 }));
+      upperQD.position.set(1.98, 0, 0.235);
       upperArmGroup.add(upperQD);
       towerGroup.add(upperArmGroup);
 
       // 2. Lower Booster Service Arm (at y = 7.6m)
       const midArmGroup = new THREE.Group();
       midArmGroup.position.set(0.65, 7.6, 0.55);
-      const midBeam = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 0.20), new THREE.MeshStandardMaterial({ color: 0x2e3848, metalness: 0.85, roughness: 0.3 }));
-      midBeam.position.set(1.2, 0, 0.1);
-      midBeam.rotation.y = -0.18;
+      const midBeam = new THREE.Mesh(new THREE.BoxGeometry(1.98, 0.15, 0.20), new THREE.MeshStandardMaterial({ color: 0x2e3848, metalness: 0.85, roughness: 0.3 }));
+      midBeam.position.set(0.99, 0, 0.118);
+      midBeam.rotation.y = -0.118;
       midBeam.castShadow = true;
       midArmGroup.add(midBeam);
-      const midQD = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.28), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9 }));
-      midQD.position.set(2.35, 0, 0.3);
+      const midQD = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.24, 0.26), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9 }));
+      midQD.position.set(1.98, 0, 0.235);
       midArmGroup.add(midQD);
       towerGroup.add(midArmGroup);
 
@@ -1084,19 +1197,19 @@
       // ================= PROCEDURAL AEROSPACE LAUNCH VEHICLE (19.2M ROCKET) =================
       const rocketGroup = new THREE.Group();
 
-      // Fuselage PBR Material
-      const fuselageMat = new THREE.MeshStandardMaterial({
-        map: fuselageDiff,
-        bumpMap: fuselageBump,
-        bumpScale: 0.04,
-        roughnessMap: fuselageRough,
-        roughness: 0.42,
-        metalness: 0.35
+      // 1. First Stage Booster PBR Material (Dedicated thermal white finish, crisp bulkheads, zero smudge)
+      const boosterMat = new THREE.MeshStandardMaterial({
+        map: boosterDiff,
+        bumpMap: boosterBump,
+        bumpScale: 0.035,
+        roughnessMap: boosterRough,
+        roughness: 0.40,
+        metalness: 0.30
       });
 
-      // 1. First Stage Booster (Height: 9.6m, Diameter: 0.9m)
+      // First Stage Booster (Height: 9.6m, Diameter: 0.9m)
       // Base sits at y = 2.4m, top at y = 12.0m -> Center at y = 7.2m
-      const boosterBody = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 9.6, 48), fuselageMat);
+      const boosterBody = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 9.6, 48), boosterMat);
       boosterBody.position.y = 7.2;
       boosterBody.castShadow = true;
       boosterBody.receiveShadow = true;
@@ -1176,9 +1289,16 @@
       });
 
       // 2. Open Vented Interstage Section (Height: 1.4m, from y = 12.0m to y = 13.4m)
+      const interstageMat = new THREE.MeshStandardMaterial({
+        map: interstageTex,
+        roughness: 0.45,
+        metalness: 0.80,
+        side: THREE.DoubleSide
+      });
+
       const interstageRing = new THREE.Mesh(
         new THREE.CylinderGeometry(0.45, 0.45, 1.4, 48, 1, true),
-        new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.45, metalness: 0.85, side: THREE.DoubleSide })
+        interstageMat
       );
       interstageRing.position.y = 12.7;
       interstageRing.castShadow = true;
@@ -1201,7 +1321,15 @@
       rocketGroup.add(vacNozzle);
 
       // 3. Second Stage Orbital Inserter (Height: 3.4m, from y = 13.4m to y = 16.8m)
-      const stage2Body = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 3.4, 48), fuselageMat);
+      const stage2Mat = new THREE.MeshStandardMaterial({
+        map: stage2Diff,
+        bumpMap: boosterBump,
+        bumpScale: 0.02,
+        roughness: 0.38,
+        metalness: 0.28
+      });
+
+      const stage2Body = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 3.4, 48), stage2Mat);
       stage2Body.position.y = 15.1;
       stage2Body.castShadow = true;
       stage2Body.receiveShadow = true;
@@ -1247,6 +1375,37 @@
       );
       thrustPuck.position.y = -0.11;
       octawebGroup.add(thrustPuck);
+
+      // 4 Forged Structural Hold-down Support Shoes (Interface solidly with Pad-07A reaction pylons)
+      const shoeMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.92, roughness: 0.28 });
+      [Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4].forEach(ang => {
+        const shoeGroup = new THREE.Group();
+        shoeGroup.rotation.y = ang;
+
+        // Solid Forged Reaction Shoe Lug
+        const shoeLug = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.16), shoeMat);
+        shoeLug.position.set(0, -0.05, 0.49);
+        shoeLug.castShadow = true;
+        shoeGroup.add(shoeLug);
+
+        // Machined bottom bearing contact plate (rests flush at world y = 2.27m on pad pylon anvil)
+        const shoeSole = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.03, 0.17),
+          new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.95, roughness: 0.18 })
+        );
+        shoeSole.position.set(0, -0.115, 0.49);
+        shoeGroup.add(shoeSole);
+
+        // Chamfered Upper Clamp Pocket Latch Interface (hooks under clamp claw)
+        const clampPocket = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.04, 0.12),
+          new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.35 })
+        );
+        clampPocket.position.set(0, 0.02, 0.49);
+        shoeGroup.add(clampPocket);
+
+        octawebGroup.add(shoeGroup);
+      });
 
       // 9 Rao Parabolic Bell Nozzles (1 Center Engine + 8 Radial Engines)
       const engineNozzles = [];
@@ -1466,8 +1625,8 @@
             btn.classList.remove('active');
           }
         });
-        if (event && event.target) {
-          event.target.classList.add('active');
+        if (typeof window !== 'undefined' && window.event && window.event.target && window.event.target.classList) {
+          window.event.target.classList.add('active');
         }
 
         switch (preset) {
@@ -1503,8 +1662,8 @@
       function setThrustMode(mode) {
         thrustMode = mode;
         document.querySelectorAll('#panel-potencia .hud-btn').forEach(btn => btn.classList.remove('active'));
-        if (event && event.target) {
-          event.target.classList.add('active');
+        if (typeof window !== 'undefined' && window.event && window.event.target && window.event.target.classList) {
+          window.event.target.classList.add('active');
         }
         updateTelemetryUI();
       }
@@ -1551,6 +1710,9 @@
 
         cameraTargetPos.set(14.5, 4.2, 16.0);
         cameraTargetLook.set(0, 6.0, 0);
+        controls.target.set(0, 6.0, 0);
+        camera.position.set(14.5, 4.2, 16.0);
+        camera.lookAt(0, 6.0, 0);
 
         hudDot.style.backgroundColor = '#38bdf8';
         hudDot.style.boxShadow = '0 0 14px rgba(56, 189, 248, 0.4)';
@@ -1684,14 +1846,15 @@
           rocketY += velocity * dt;
         }
 
-        // Animate Umbilical Service Arms Retraction
-        upperArmGroup.rotation.y = -armRetract * 0.52;
-        midArmGroup.rotation.y = -armRetract * 0.52;
+        // Animate Umbilical Service Arms Retraction (Swing smoothly away from rocket)
+        upperArmGroup.rotation.y = -armRetract * 0.55;
+        midArmGroup.rotation.y = -armRetract * 0.55;
 
-        // Animate Hold-Down Clamps Release
+        // Animate Hold-Down Clamps Release (Swing claw out and back, completely clearing rocket path)
         clampGroups.forEach(cg => {
-          cg.userData.claw.rotation.x = 0.38 + clampOpen * 0.75;
-          cg.userData.claw.position.z = 0.98 + clampOpen * 0.32;
+          if (cg.userData.clawGroup) {
+            cg.userData.clawGroup.rotation.x = -clampOpen * 0.85;
+          }
         });
 
         // Dynamic Engine Gimbal Micro-Tilt (Closed-loop thrust vector control)
@@ -1869,19 +2032,31 @@
           smokePoints.geometry.attributes.position.needsUpdate = true;
         }
 
-        // Camera Tracking During Ascent
+        // Continuous, Framerate-Independent Camera Tracking During Launch & Flight
         const isFlight = launchPhase === 'liftoff' || launchPhase === 'ascent' || launchPhase === 'cruising';
         if (isFlight) {
-          const desiredLookY = 6.0 + rocketY * 0.78;
-          const desiredPosY = 8.0 + rocketY * 0.80;
-          const dist = 1.0 + Math.min(rocketY * 0.012, 0.45);
+          // 1. Target of Interest: Mid-upper vehicle axis (rocket is 20.6m tall from engine bells to fairing apex)
+          // Looking at rocketY + 13.5m centers the entire launch stack and trailing flame plume symmetrically
+          const targetLookY = 13.5 + rocketY;
+          controls.target.x = THREE.MathUtils.damp(controls.target.x, 0, 6.0, dt);
+          controls.target.y = THREE.MathUtils.damp(controls.target.y, targetLookY, 8.0, dt);
+          controls.target.z = THREE.MathUtils.damp(controls.target.z, 0, 6.0, dt);
 
-          cameraTargetLook.set(0, desiredLookY, 0);
-          cameraTargetPos.set(14.5 * dist, desiredPosY, 16.0 * dist);
+          // 2. Camera Vantage Position: Eye elevation tracks the vehicle synchronously at identical rate (lambda 8.0)
+          const targetEyeY = 12.5 + rocketY;
+          // Smooth progressive distance expansion so the ascending rocket and full plume stay in view
+          const distMult = 1.0 + Math.min(rocketY * 0.015, 0.85);
+          const targetEyeX = 18.0 * distMult;
+          const targetEyeZ = 20.0 * distMult;
+
+          camera.position.x = THREE.MathUtils.damp(camera.position.x, targetEyeX, 5.0, dt);
+          camera.position.y = THREE.MathUtils.damp(camera.position.y, targetEyeY, 8.0, dt);
+          camera.position.z = THREE.MathUtils.damp(camera.position.z, targetEyeZ, 5.0, dt);
+        } else {
+          // Pre-launch & Standby: Smooth interpolation between inspection presets (PAD, COHETE, MOTOR, TORRE)
+          camera.position.lerp(cameraTargetPos, dt * 3.5);
+          controls.target.lerp(cameraTargetLook, dt * 3.5);
         }
-
-        camera.position.lerp(cameraTargetPos, dt * 3.5);
-        controls.target.lerp(cameraTargetLook, dt * 3.5);
 
         if (autoRotate && launchPhase === 'standby') {
           controls.autoRotate = true;
@@ -1898,6 +2073,39 @@
       window.setCameraPreset = setCameraPreset;
       window.toggleAutoRotate = toggleAutoRotate;
       window.setThrustMode = setThrustMode;
+      window.startLaunch = startLaunch;
+      window.resetLaunch = resetLaunch;
+
+      // URL parameters for interactive inspection & automated verification
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pPreset = urlParams.get('preset');
+        if (pPreset) {
+          setCameraPreset(pPreset);
+          camera.position.copy(cameraTargetPos);
+          controls.target.copy(cameraTargetLook);
+        }
+        if (urlParams.get('launch') === '1') {
+          startLaunch();
+          const fastAlt = parseFloat(urlParams.get('alt'));
+          if (!isNaN(fastAlt) && fastAlt > 0) {
+            launchPhase = 'ascent';
+            rocketY = fastAlt;
+            velocity = 18.0;
+            armRetract = 1.0;
+            clampOpen = 1.0;
+            countdownBanner.style.display = 'none';
+            hudDot.style.backgroundColor = '#10b981';
+            hudStatus.textContent = 'ASCENSO // TRAYECTORIA NOMINAL';
+            hudStatus.style.color = '#10b981';
+
+            // Synchronously position camera at vehicle altitude
+            const distMult = 1.0 + Math.min(fastAlt * 0.015, 0.85);
+            controls.target.set(0, 13.5 + fastAlt, 0);
+            camera.position.set(18.0 * distMult, 12.5 + fastAlt, 20.0 * distMult);
+          }
+        }
+      } catch (e) {}
 
       animate();
     }
