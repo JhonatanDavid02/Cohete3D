@@ -1,16 +1,1149 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300e5ff'><path d='M12 2.5s4 4 4 9.5c0 2-.8 3.8-2 5l-1 4.5-1-4.5c-1.2-1.2-2-3-2-5 0-5.5 4-9.5 4-9.5z'/></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Plataforma de Lanzamiento Espacial 3D | Pad-07</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma de Lanzamiento Espacial 3D | Pad-07A</title>
+  <meta name="description" content="Simulador interactivo 3D de plataforma de lanzamiento espacial con Three.js. Cuenta regresiva, ignición, desacoplamiento mecánico, física de ascenso y telemetría HUD en tiempo real.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --bg-deep: #040711;
+      --panel-bg: rgba(10, 15, 28, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --panel-hover: rgba(255, 255, 255, 0.12);
+      --accent-cyan: #00e5ff;
+      --accent-amber: #f59e0b;
+      --accent-orange: #f97316;
+      --accent-emerald: #10b981;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* HUD Overlay */
+    .hud-container {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 28px;
+      z-index: 10;
+    }
+
+    /* Top Header */
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      pointer-events: auto;
+    }
+
+    .hud-badge {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      padding: 12px 18px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .hud-indicator-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+      transition: all 0.3s ease;
+      animation: hudPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes hudPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+
+    .hud-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hud-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .hud-status {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: #38bdf8;
+      transition: color 0.3s ease;
+    }
+
+    .hud-telemetry-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .telemetry-label {
+      color: var(--text-muted);
+    }
+
+    .telemetry-value {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .telemetry-divider {
+      color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Countdown Banner */
+    .hud-countdown-banner {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      animation: scaleIn 0.3s ease-out;
+    }
+
+    .countdown-number {
+      font-family: var(--font-mono);
+      font-size: 80px;
+      font-weight: 800;
+      color: #f59e0b;
+      text-shadow: 0 0 35px rgba(245, 158, 11, 0.8), 0 0 70px rgba(245, 158, 11, 0.4);
+      letter-spacing: -2px;
+    }
+
+    .countdown-sub {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: #f8fafc;
+      background: rgba(10, 15, 28, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 6px 16px;
+      border-radius: 20px;
+    }
+
+    @keyframes scaleIn {
+      from { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+      to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    /* Bottom Footer Dock */
+    .hud-footer {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+    }
+
+    .hud-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      padding: 8px 12px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .panel-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      padding-left: 4px;
+    }
+
+    .hud-btn-group {
+      display: flex;
+      gap: 4px;
+    }
+
+    .hud-btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hud-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .hud-btn.active {
+      background: rgba(0, 229, 255, 0.15);
+      border-color: rgba(0, 229, 255, 0.4);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+    }
+
+    .hud-btn-launch {
+      padding: 10px 22px;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      border: 1px solid #fb923c;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(249, 115, 22, 0.45);
+    }
+
+    .hud-btn-launch:hover {
+      background: linear-gradient(135deg, #fb923c, #f97316);
+      box-shadow: 0 6px 25px rgba(249, 115, 22, 0.65);
+      transform: translateY(-1px);
+    }
+
+    .hud-btn-reset {
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+
+    .hud-btn-reset:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    /* Interaction Hint */
+    .hud-interaction-hint {
+      position: absolute;
+      bottom: 24px;
+      right: 28px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      background: var(--panel-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--panel-border);
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    .hud-interaction-hint .dot {
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    @media (max-width: 900px) {
+      .hud-interaction-hint { display: none; }
+      .hud-container { padding: 16px; }
+      .hud-header { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- HUD Overlay -->
+  <div class="hud-container">
+    <!-- Top Header -->
+    <header class="hud-header">
+      <div class="hud-badge">
+        <div id="hud-dot" class="hud-indicator-dot"></div>
+        <div class="hud-title-group">
+          <div class="hud-tag">LAUNCH PLATFORM • PAD-07A</div>
+          <div id="hud-status-text" class="hud-status">READY // ESPERA DE IGNICIÓN</div>
+        </div>
+      </div>
+
+      <div class="hud-telemetry-pill">
+        <span class="telemetry-item">
+          <span class="telemetry-label">ALTITUD:</span>
+          <span id="tel-alt" class="telemetry-value">0.0 m</span>
+        </span>
+        <span class="telemetry-divider">|</span>
+        <span class="telemetry-item">
+          <span class="telemetry-label">VELOCIDAD:</span>
+          <span id="tel-vel" class="telemetry-value">0 km/h</span>
+        </span>
+        <span class="telemetry-divider">|</span>
+        <span class="telemetry-item">
+          <span class="telemetry-label">EMPUJE:</span>
+          <span id="tel-thrust" class="telemetry-value">35% IDLE</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- Countdown Banner -->
+    <div id="countdown-banner" class="hud-countdown-banner" style="display: none;">
+      <div id="countdown-number" class="countdown-number">T - 03</div>
+      <div class="countdown-sub">SECUENCIA AUTOMÁTICA EN PROCESO</div>
+    </div>
+
+    <!-- Bottom Footer Dock -->
+    <footer class="hud-footer">
+      <div class="hud-panel" style="background: transparent; border: none; padding: 0;">
+        <button id="btn-launch" type="button" class="hud-btn hud-btn-launch">
+          <span>▲</span>
+          <span>INICIAR DESPEGUE</span>
+        </button>
+        <button id="btn-reset" type="button" class="hud-btn hud-btn-reset" style="display: none;">
+          <span>↺</span>
+          <span>REINICIAR LANZAMIENTO</span>
+        </button>
+      </div>
+
+      <div id="panel-potencia" class="hud-panel">
+        <span class="panel-label">POTENCIA</span>
+        <div class="hud-btn-group">
+          <button type="button" class="hud-btn" onclick="setThrustMode('idle')">APAGADO</button>
+          <button type="button" class="hud-btn active" onclick="setThrustMode('standby')">STANDBY</button>
+          <button type="button" class="hud-btn" onclick="setThrustMode('test')">IGNICIÓN</button>
+        </div>
+      </div>
+
+      <div class="hud-panel">
+        <span class="panel-label">CÁMARA</span>
+        <div class="hud-btn-group">
+          <button type="button" class="hud-btn active" onclick="setCameraPreset('default')">PAD</button>
+          <button type="button" class="hud-btn" onclick="setCameraPreset('rocket')">COHETE</button>
+          <button type="button" class="hud-btn" onclick="setCameraPreset('engine')">MOTOR</button>
+          <button type="button" class="hud-btn" onclick="setCameraPreset('tower')">TORRE</button>
+          <button type="button" id="btn-autorotate" class="hud-btn" onclick="toggleAutoRotate()">GIRO</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Hint -->
+    <div class="hud-interaction-hint">
+      <span>Arrastra para rotar</span>
+      <span class="dot">•</span>
+      <span>Rueda para zoom</span>
+      <span class="dot">•</span>
+      <span>Clic derecho para desplazar</span>
+    </div>
+  </div>
+
+  <!-- Three.js y OrbitControls locales: Carga 100% directa y offline sin dependencias externas -->
+  <script src="./vendor/three.min.js"></script>
+  <script src="./vendor/OrbitControls.js"></script>
+
+  <script>
+    function initRocketApp() {
+      if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+        setTimeout(initRocketApp, 40);
+        return;
+      }
+
+      // Launch States & Physics Variables
+      let launchPhase = 'standby'; // 'standby' | 'countdown' | 'ignition' | 'liftoff' | 'ascent' | 'cruising'
+    let countdownVal = 3;
+    let rocketY = 0;
+    let velocity = 0;
+    let armRetract = 0;
+    let clampOpen = 0;
+    let thrustMode = 'standby'; // 'idle' | 'standby' | 'test'
+    let autoRotate = false;
+    let phaseTimer = 0;
+
+    // HUD Elements
+    const hudDot = document.getElementById('hud-dot');
+    const hudStatus = document.getElementById('hud-status-text');
+    const telAlt = document.getElementById('tel-alt');
+    const telVel = document.getElementById('tel-vel');
+    const telThrust = document.getElementById('tel-thrust');
+    const countdownBanner = document.getElementById('countdown-banner');
+    const countdownNum = document.getElementById('countdown-number');
+    const btnLaunch = document.getElementById('btn-launch');
+    const btnReset = document.getElementById('btn-reset');
+    const panelPotencia = document.getElementById('panel-potencia');
+    const btnAutoRotate = document.getElementById('btn-autorotate');
+
+    // Setup Three.js Scene
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#040711');
+    scene.fog = new THREE.FogExp2('#040711', 0.024);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 300);
+    const cameraTargetPos = new THREE.Vector3(9.5, 6.2, 11.5);
+    const cameraTargetLook = new THREE.Vector3(0, 4.2, 0);
+    camera.position.copy(cameraTargetPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 3.2;
+    controls.maxDistance = 45;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04;
+    controls.target.copy(cameraTargetLook);
+
+    // ================= LIGHTING =================
+    const ambLight = new THREE.AmbientLight('#0c162c', 0.8);
+    scene.add(ambLight);
+
+    const hemiLight = new THREE.HemisphereLight('#1e293b', '#040711', 0.6);
+    scene.add(hemiLight);
+
+    const dirKeyLight = new THREE.DirectionalLight('#f1f5f9', 2.4);
+    dirKeyLight.position.set(14, 20, 12);
+    dirKeyLight.castShadow = true;
+    dirKeyLight.shadow.mapSize.width = 2048;
+    dirKeyLight.shadow.mapSize.height = 2048;
+    dirKeyLight.shadow.camera.near = 0.5;
+    dirKeyLight.shadow.camera.far = 50;
+    scene.add(dirKeyLight);
+
+    const rimLight = new THREE.DirectionalLight('#0284c7', 1.6);
+    rimLight.position.set(-12, 10, -10);
+    scene.add(rimLight);
+
+    const flameLight = new THREE.PointLight('#ff5500', 6, 18, 2);
+    flameLight.position.set(0, 0.7, 0);
+    scene.add(flameLight);
+
+    const coreGlowLight = new THREE.PointLight('#38bdf8', 0, 8, 2);
+    scene.add(coreGlowLight);
+
+    // Tower 1 Strobe Beacon Light
+    const towerBeacon = new THREE.PointLight('#ef4444', 3.5, 10, 2);
+    towerBeacon.position.set(-2.95, 11.2, -0.6);
+    scene.add(towerBeacon);
+
+    // ================= ENVIRONMENT PARTICLES =================
+    // Starfield
+    const starsCount = 2800;
+    const starGeo = new THREE.BufferGeometry();
+    const starPos = new Float32Array(starsCount * 3);
+    for (let i = 0; i < starsCount; i++) {
+      const r = 60 + Math.random() * 60;
+      const th = Math.random() * Math.PI * 2;
+      const ph = Math.acos(2 * Math.random() - 1);
+      starPos[i * 3 + 0] = r * Math.sin(ph) * Math.cos(th);
+      starPos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+      starPos[i * 3 + 2] = r * Math.cos(ph);
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.28, transparent: true, opacity: 0.7 });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    // Floating Dust Particles
+    const dustCount = 200;
+    const dustGeo = new THREE.BufferGeometry();
+    const dustPos = new Float32Array(dustCount * 3);
+    const dustVel = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+      dustPos[i * 3 + 0] = (Math.random() - 0.5) * 26;
+      dustPos[i * 3 + 1] = 0.5 + Math.random() * 12;
+      dustPos[i * 3 + 2] = (Math.random() - 0.5) * 26;
+      dustVel[i * 3 + 0] = (Math.random() - 0.5) * 0.08;
+      dustVel[i * 3 + 1] = 0.05 + Math.random() * 0.12;
+      dustVel[i * 3 + 2] = (Math.random() - 0.5) * 0.08;
+    }
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    const dustMat = new THREE.PointsMaterial({ color: 0x93c5fd, size: 0.07, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending });
+    const dustPoints = new THREE.Points(dustGeo, dustMat);
+    scene.add(dustPoints);
+
+    // ================= 3D LAUNCH PLATFORM (PAD-07A) =================
+    const padGroup = new THREE.Group();
+
+    // Main Deck
+    const deckMat = new THREE.MeshStandardMaterial({ color: 0x1e232d, roughness: 0.4, metalness: 0.75 });
+    const padDeck = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.25, 0.3, 48), deckMat);
+    padDeck.position.set(0, 1.15, 0);
+    padDeck.castShadow = true;
+    padDeck.receiveShadow = true;
+    padGroup.add(padDeck);
+
+    // Guard Bezel & Subdeck
+    const subDeck = new THREE.Mesh(new THREE.CylinderGeometry(4.26, 4.15, 0.12, 48), new THREE.MeshStandardMaterial({ color: 0x12161f, roughness: 0.6, metalness: 0.8 }));
+    subDeck.position.set(0, 0.95, 0);
+    padGroup.add(subDeck);
+
+    // Central Exhaust Trench Pit & Flame Deflector
+    const trenchMat = new THREE.MeshStandardMaterial({ color: 0x2d3340, roughness: 0.45, metalness: 0.65 });
+    const trenchCollar = new THREE.Mesh(new THREE.CylinderGeometry(1.58, 1.62, 0.04, 36), trenchMat);
+    trenchCollar.position.set(0, 1.31, 0);
+    padGroup.add(trenchCollar);
+
+    const cautionRing = new THREE.Mesh(new THREE.RingGeometry(1.65, 1.95, 36), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.5, metalness: 0.2 }));
+    cautionRing.rotation.x = -Math.PI / 2;
+    cautionRing.position.set(0, 1.305, 0);
+    padGroup.add(cautionRing);
+
+    // Double-sided flame deflector wedge
+    const deflectorMat = new THREE.MeshStandardMaterial({ color: 0x222834, roughness: 0.35, metalness: 0.8 });
+    const wedge1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 2.6), deflectorMat);
+    wedge1.rotation.z = Math.PI / 4;
+    wedge1.position.set(0, 0.15, 0);
+    const wedge2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 2.6), deflectorMat);
+    wedge2.rotation.z = -Math.PI / 4;
+    wedge2.position.set(0, 0.15, 0);
+    padGroup.add(wedge1);
+    padGroup.add(wedge2);
+
+    // 4 Animated Hold-down Clamps
+    const clampGroups = [];
+    [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2].forEach((ang) => {
+      const cg = new THREE.Group();
+      cg.rotation.y = ang + Math.PI / 4;
+
+      const baseBlock = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.25, 0.45), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 }));
+      baseBlock.position.set(0, 1.42, 1.15);
+      cg.add(baseBlock);
+
+      const hydr = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.35, 16), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.85, roughness: 0.25 }));
+      hydr.position.set(0, 1.62, 1.18);
+      hydr.rotation.x = -0.4;
+      cg.add(hydr);
+
+      const claw = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.25), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.2 }));
+      claw.position.set(0, 1.75, 0.98);
+      claw.rotation.x = 0.4;
+      cg.add(claw);
+
+      cg.userData = { hydr, claw };
+      padGroup.add(cg);
+      clampGroups.push(cg);
+    });
+
+    // 8 Support Columns
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const x = Math.cos(a) * 3.6;
+      const z = Math.sin(a) * 3.6;
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.9, 16), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.75, roughness: 0.4 }));
+      col.position.set(x, 0.55, z);
+      padGroup.add(col);
+    }
+
+    // 24 Pulsating Perimeter LEDs
+    const padLedsGroup = new THREE.Group();
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const led = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 0.06, 12),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: i % 4 === 0 ? 0xf59e0b : 0x00e5ff, emissiveIntensity: 0.8 })
+      );
+      led.position.set(Math.cos(a) * 4.15, 1.34, Math.sin(a) * 4.15);
+      padLedsGroup.add(led);
+    }
+    padGroup.add(padLedsGroup);
+
+    // Blast Apron Ground
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(22, 64), new THREE.MeshStandardMaterial({ color: 0x0b0e14, roughness: 0.85, metalness: 0.25 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.01;
+    ground.receiveShadow = true;
+    padGroup.add(ground);
+
+    scene.add(padGroup);
+
+    // ================= SERVICE GANTRY TOWERS =================
+    const towerGroup = new THREE.Group();
+    towerGroup.position.set(-2.95, 1.15, -0.6);
+
+    // 4 Corner Chords
+    [-0.55, 0.55].forEach(x => {
+      [-0.55, 0.55].forEach(z => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 8.8, 0.1), new THREE.MeshStandardMaterial({ color: 0x2d3748, metalness: 0.8, roughness: 0.35 }));
+        post.position.set(x, 4.6, z);
+        towerGroup.add(post);
+      });
+    });
+
+    // Platforms & Horizontal Girders
+    [1.8, 3.4, 5.0, 6.6, 8.2].forEach(y => {
+      const g = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 1.2), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 }));
+      g.position.set(0, y, 0);
+      towerGroup.add(g);
+    });
+
+    // Top Platform & Red Beacon Mesh
+    const beaconMesh = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 2.5 }));
+    beaconMesh.position.set(0, 10.0, 0);
+    towerGroup.add(beaconMesh);
+
+    // Retractable Umbilical Service Arms
+    const upperArmGroup = new THREE.Group();
+    upperArmGroup.position.set(0.55, 5.8, 0.45);
+    const upperBeam = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.14, 0.18), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8 }));
+    upperBeam.position.set(1.05, 0, 0.08);
+    upperBeam.rotation.y = -0.15;
+    upperArmGroup.add(upperBeam);
+    towerGroup.add(upperArmGroup);
+
+    const midArmGroup = new THREE.Group();
+    midArmGroup.position.set(0.55, 3.5, 0.45);
+    const midBeam = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.12, 0.15), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 }));
+    midBeam.position.set(1.05, 0, 0.08);
+    midBeam.rotation.y = -0.15;
+    midArmGroup.add(midBeam);
+    towerGroup.add(midArmGroup);
+
+    scene.add(towerGroup);
+
+    // ================= PROCEDURAL SPACECRAFT ROCKET =================
+    const rocketGroup = new THREE.Group();
+
+    // Lower stage
+    const lowerStage = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.86, 2.4, 36), new THREE.MeshStandardMaterial({ color: 0xeaeef2, roughness: 0.25, metalness: 0.2 }));
+    lowerStage.position.y = 3.4;
+    lowerStage.castShadow = true;
+    rocketGroup.add(lowerStage);
+
+    // Interstage band
+    const interstage = new THREE.Mesh(new THREE.CylinderGeometry(0.825, 0.825, 0.2, 36), new THREE.MeshStandardMaterial({ color: 0x1e222a, roughness: 0.4, metalness: 0.8 }));
+    interstage.position.y = 4.65;
+    rocketGroup.add(interstage);
+
+    // Upper stage
+    const upperStage = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.82, 2.2, 36), new THREE.MeshStandardMaterial({ color: 0xeaeef2, roughness: 0.22, metalness: 0.2 }));
+    upperStage.position.y = 5.85;
+    upperStage.castShadow = true;
+    rocketGroup.add(upperStage);
+
+    // Nose cone & tip
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.74, 1.8, 36), new THREE.MeshStandardMaterial({ color: 0xf4f7fb, roughness: 0.2, metalness: 0.25 }));
+    nose.position.y = 7.95;
+    nose.castShadow = true;
+    rocketGroup.add(nose);
+
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.45, 24), new THREE.MeshStandardMaterial({ color: 0x14171d, roughness: 0.6, metalness: 0.8 }));
+    tip.position.y = 8.85;
+    rocketGroup.add(tip);
+
+    // Cockpit Window with glowing cyan glass
+    const cockpitGlass = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.16, 0.08), new THREE.MeshStandardMaterial({ color: 0x001826, emissive: 0x00d5ff, emissiveIntensity: 0.6 }));
+    cockpitGlass.position.set(0, 7.35, 0.65);
+    cockpitGlass.rotation.x = 0.2;
+    rocketGroup.add(cockpitGlass);
+
+    // 4 Fins
+    [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2].forEach(a => {
+      const fg = new THREE.Group();
+      fg.rotation.y = a;
+      fg.position.y = 2.5;
+
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.3, 0.9), new THREE.MeshStandardMaterial({ color: 0xdce3eb, roughness: 0.3, metalness: 0.4 }));
+      fin.position.set(0, 0.45, 1.28);
+      fin.castShadow = true;
+      fg.add(fin);
+
+      const bevel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.35), new THREE.MeshStandardMaterial({ color: 0xff4400, roughness: 0.35 }));
+      bevel.position.set(0, 0.2, 1.62);
+      bevel.rotation.x = -0.35;
+      fg.add(bevel);
+
+      rocketGroup.add(fg);
+    });
+
+    // Engine Assembly
+    const engineNozzle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.34, 0.65, 0.6, 32, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0x252932, roughness: 0.25, metalness: 0.92, side: THREE.DoubleSide })
+    );
+    engineNozzle.position.y = 1.55;
+    rocketGroup.add(engineNozzle);
+
+    const glowingThroat = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.26, 0.32, 0.12, 24),
+      new THREE.MeshStandardMaterial({ color: 0xff7700, emissive: 0xff4400, emissiveIntensity: 2.0 })
+    );
+    glowingThroat.position.y = 1.72;
+    rocketGroup.add(glowingThroat);
+
+    scene.add(rocketGroup);
+
+    // ================= ENGINE PROPULSION FLAME =================
+    const flameGroup = new THREE.Group();
+    flameGroup.position.set(0, 1.25, 0);
+
+    const coreFlame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.26, 1.3, 24),
+      new THREE.MeshBasicMaterial({ color: 0xd6f4ff, transparent: true, opacity: 0.95 })
+    );
+    coreFlame.rotation.x = Math.PI;
+    coreFlame.position.y = -0.65;
+    flameGroup.add(coreFlame);
+
+    const midPlasma = new THREE.Mesh(
+      new THREE.ConeGeometry(0.48, 1.9, 24),
+      new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    midPlasma.rotation.x = Math.PI;
+    midPlasma.position.y = -0.95;
+    flameGroup.add(midPlasma);
+
+    const outerAura = new THREE.Mesh(
+      new THREE.ConeGeometry(0.72, 2.4, 24),
+      new THREE.MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    outerAura.rotation.x = Math.PI;
+    outerAura.position.y = -1.2;
+    flameGroup.add(outerAura);
+
+    scene.add(flameGroup);
+
+    // ================= SMOKE TRAIL PARTICLES =================
+    const smokeCount = 260;
+    const smokeGeo = new THREE.BufferGeometry();
+    const smokePos = new Float32Array(smokeCount * 3);
+    const smokeVel = new Float32Array(smokeCount * 3);
+    const smokeAges = new Float32Array(smokeCount);
+    const smokeMaxAges = new Float32Array(smokeCount);
+
+    for (let i = 0; i < smokeCount; i++) {
+      smokePos[i * 3 + 1] = -100; // offscreen
+      smokeMaxAges[i] = 2.0 + Math.random() * 1.5;
+      smokeAges[i] = Math.random() * smokeMaxAges[i];
+    }
+    smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
+
+    // Circular soft alpha texture for smoke
+    const smokeCanvas = document.createElement('canvas');
+    smokeCanvas.width = 64;
+    smokeCanvas.height = 64;
+    const sCtx = smokeCanvas.getContext('2d');
+    const sGrad = sCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    sGrad.addColorStop(0, 'rgba(255,255,255,1)');
+    sGrad.addColorStop(0.3, 'rgba(240,245,255,0.85)');
+    sGrad.addColorStop(0.7, 'rgba(190,205,225,0.3)');
+    sGrad.addColorStop(1, 'rgba(100,110,130,0)');
+    sCtx.fillStyle = sGrad;
+    sCtx.fillRect(0, 0, 64, 64);
+    const smokeTex = new THREE.CanvasTexture(smokeCanvas);
+
+    const smokeMat = new THREE.PointsMaterial({
+      size: 1.6,
+      map: smokeTex,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+      color: 0xfed7aa
+    });
+    const smokePoints = new THREE.Points(smokeGeo, smokeMat);
+    scene.add(smokePoints);
+
+    // ================= CAMERA VIEWS & PRESETS =================
+    function setCameraPreset(preset) {
+      document.querySelectorAll('.hud-footer .hud-btn').forEach(btn => {
+        if (['PAD', 'COHETE', 'MOTOR', 'TORRE'].includes(btn.textContent.trim())) {
+          btn.classList.remove('active');
+        }
+      });
+      event.target.classList.add('active');
+
+      switch (preset) {
+        case 'rocket':
+          cameraTargetPos.set(3.5, 6.0, 4.5);
+          cameraTargetLook.set(0, 5.5, 0);
+          break;
+        case 'engine':
+          cameraTargetPos.set(2.8, 1.8, 3.2);
+          cameraTargetLook.set(0, 1.4, 0);
+          break;
+        case 'tower':
+          cameraTargetPos.set(-4.8, 7.0, 3.5);
+          cameraTargetLook.set(-1.0, 5.5, 0);
+          break;
+        case 'default':
+        default:
+          cameraTargetPos.set(9.5, 6.2, 11.5);
+          cameraTargetLook.set(0, 4.2, 0);
+          break;
+      }
+    }
+
+    function toggleAutoRotate() {
+      autoRotate = !autoRotate;
+      btnAutoRotate.classList.toggle('active', autoRotate);
+    }
+
+    function setThrustMode(mode) {
+      thrustMode = mode;
+      document.querySelectorAll('#panel-potencia .hud-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      updateTelemetryUI();
+    }
+
+    // ================= LAUNCH CONTROLS =================
+    btnLaunch.addEventListener('click', startLaunch);
+    btnReset.addEventListener('click', resetLaunch);
+
+    function startLaunch() {
+      launchPhase = 'countdown';
+      countdownVal = 3;
+      phaseTimer = 0;
+      rocketY = 0;
+      velocity = 0;
+      armRetract = 0;
+      clampOpen = 0;
+
+      btnLaunch.style.display = 'none';
+      btnReset.style.display = 'inline-flex';
+      panelPotencia.style.display = 'none';
+      countdownBanner.style.display = 'flex';
+      countdownNum.textContent = 'T - 03';
+
+      hudDot.style.backgroundColor = '#f59e0b';
+      hudDot.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.6)';
+      hudStatus.textContent = 'CUENTA REGRESIVA // T-03s';
+      hudStatus.style.color = '#f59e0b';
+    }
+
+    function resetLaunch() {
+      launchPhase = 'standby';
+      phaseTimer = 0;
+      rocketY = 0;
+      velocity = 0;
+      armRetract = 0;
+      clampOpen = 0;
+
+      btnLaunch.style.display = 'inline-flex';
+      btnReset.style.display = 'none';
+      panelPotencia.style.display = 'flex';
+      countdownBanner.style.display = 'none';
+
+      cameraTargetPos.set(9.5, 6.2, 11.5);
+      cameraTargetLook.set(0, 4.2, 0);
+
+      hudDot.style.backgroundColor = '#38bdf8';
+      hudDot.style.boxShadow = '0 0 14px rgba(56, 189, 248, 0.4)';
+      hudStatus.textContent = 'READY // ESPERA DE IGNICIÓN';
+      hudStatus.style.color = '#38bdf8';
+
+      updateTelemetryUI();
+    }
+
+    function updateTelemetryUI() {
+      telAlt.textContent = (rocketY * 4.2).toFixed(1) + ' m';
+      telVel.textContent = (velocity * 18.0).toFixed(0) + ' km/h';
+
+      if (launchPhase === 'countdown') {
+        telThrust.textContent = 'STANDBY';
+      } else if (launchPhase === 'ignition' || launchPhase === 'liftoff' || launchPhase === 'ascent') {
+        telThrust.textContent = '100% MAX';
+      } else if (launchPhase === 'cruising') {
+        telThrust.textContent = '40% NOMINAL';
+      } else {
+        telThrust.textContent = thrustMode === 'test' ? '100% TEST' : thrustMode === 'standby' ? '35% IDLE' : 'OFFLINE';
+      }
+    }
+
+    // Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ================= MAIN ANIMATION & SIMULATION LOOP =================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const t = clock.getElapsedTime();
+
+      // Aviation strobe blink on gantry tower
+      const strobe = (Math.sin(t * 5.0) > 0.6 ? 1 : 0.15) * (Math.sin(t * 10) > 0 ? 1 : 0.5);
+      towerBeacon.intensity = strobe * 4.0;
+      beaconMesh.material.emissiveIntensity = strobe * 3.0;
+
+      // Platform LEDs gentle pulse
+      const ledPulse = 0.5 + Math.sin(t * 2.8) * 0.45;
+      padLedsGroup.children.forEach(c => c.material.emissiveIntensity = ledPulse);
+
+      // ================= LAUNCH SEQUENCE LOGIC =================
+      if (launchPhase === 'countdown') {
+        phaseTimer += dt;
+        if (phaseTimer < 1.0) {
+          countdownNum.textContent = 'T - 03';
+        } else if (phaseTimer < 2.0) {
+          countdownNum.textContent = 'T - 02';
+        } else if (phaseTimer < 3.0) {
+          countdownNum.textContent = 'T - 01';
+        } else {
+          // Transition to Ignition
+          launchPhase = 'ignition';
+          phaseTimer = 0;
+          countdownBanner.style.display = 'none';
+
+          hudDot.style.backgroundColor = '#f97316';
+          hudDot.style.boxShadow = '0 0 16px rgba(249, 115, 22, 0.8)';
+          hudStatus.textContent = 'IGNICIÓN // EMPUJE MÁXIMO';
+          hudStatus.style.color = '#f97316';
+        }
+      } else if (launchPhase === 'ignition') {
+        phaseTimer += dt;
+        if (phaseTimer >= 1.8) {
+          launchPhase = 'liftoff';
+          phaseTimer = 0;
+
+          hudDot.style.backgroundColor = '#ef4444';
+          hudDot.style.boxShadow = '0 0 16px rgba(239, 68, 68, 0.8)';
+          hudStatus.textContent = 'DESPEGUE // LIBERACIÓN DE BRAZOS';
+          hudStatus.style.color = '#ef4444';
+        }
+      } else if (launchPhase === 'liftoff') {
+        armRetract = Math.min(armRetract + dt * 1.6, 1.0);
+        clampOpen = Math.min(clampOpen + dt * 2.5, 1.0);
+
+        velocity += 2.2 * dt;
+        rocketY += velocity * dt;
+
+        if (rocketY > 4.5) {
+          launchPhase = 'ascent';
+          hudDot.style.backgroundColor = '#10b981';
+          hudDot.style.boxShadow = '0 0 16px rgba(16, 185, 129, 0.8)';
+          hudStatus.textContent = 'ASCENSO // TRAYECTORIA NOMINAL';
+          hudStatus.style.color = '#10b981';
+        }
+      } else if (launchPhase === 'ascent') {
+        armRetract = 1.0;
+        clampOpen = 1.0;
+
+        const accel = 3.2 + Math.min(rocketY * 0.06, 3.8);
+        velocity = Math.min(velocity + accel * dt, 17.5);
+        rocketY += velocity * dt;
+
+        if (rocketY >= 52.0) {
+          launchPhase = 'cruising';
+          hudDot.style.backgroundColor = '#00e5ff';
+          hudDot.style.boxShadow = '0 0 16px rgba(0, 229, 255, 0.8)';
+          hudStatus.textContent = 'ÓRBITA ALCANZADA // VUELO NOMINAL';
+          hudStatus.style.color = '#00e5ff';
+        }
+      } else if (launchPhase === 'cruising') {
+        velocity = Math.max(velocity - dt * 6.0, 1.4);
+        rocketY += velocity * dt;
+      }
+
+      // Update Clamps & Arms
+      upperArmGroup.rotation.y = -armRetract * 0.45;
+      midArmGroup.rotation.y = -armRetract * 0.45;
+
+      clampGroups.forEach(cg => {
+        cg.userData.claw.rotation.x = 0.4 + clampOpen * 0.65;
+        cg.userData.claw.position.z = 0.98 + clampOpen * 0.25;
+      });
+
+      // Rocket Vibration
+      let vibX = 0, vibZ = 0, vibY = 0;
+      if (launchPhase === 'ignition') {
+        vibX = Math.sin(t * 75) * 0.0045;
+        vibZ = Math.cos(t * 85) * 0.0045;
+        vibY = Math.sin(t * 110) * 0.003;
+      } else if (launchPhase === 'liftoff' || launchPhase === 'ascent') {
+        vibX = Math.sin(t * 50) * 0.0025;
+        vibZ = Math.cos(t * 55) * 0.0025;
+      } else if (thrustMode === 'test') {
+        vibX = Math.sin(t * 70) * 0.006;
+        vibZ = Math.cos(t * 85) * 0.006;
+      }
+
+      rocketGroup.position.set(vibX, rocketY + vibY, vibZ);
+
+      // Flame scale & light
+      let targetFlameY = 0.001;
+      let targetFlameXZ = 0.001;
+      let flameIntensity = 0.1;
+
+      const isThrusting = ['ignition', 'liftoff', 'ascent', 'cruising'].includes(launchPhase) || thrustMode === 'test';
+      if (launchPhase === 'ascent' || launchPhase === 'liftoff' || thrustMode === 'test') {
+        const flutter = 1 + Math.sin(t * 45) * 0.08;
+        targetFlameY = (launchPhase === 'ascent' ? 2.5 : 2.0) * flutter;
+        targetFlameXZ = 1.35 * flutter;
+        flameIntensity = 24;
+      } else if (launchPhase === 'ignition') {
+        targetFlameY = 1.6;
+        targetFlameXZ = 1.15;
+        flameIntensity = 18;
+      } else if (launchPhase === 'cruising') {
+        targetFlameY = 1.2;
+        targetFlameXZ = 0.85;
+        flameIntensity = 10;
+      } else if (thrustMode === 'standby' || launchPhase === 'countdown') {
+        targetFlameY = 0.85;
+        targetFlameXZ = 0.7;
+        flameIntensity = 6;
+      }
+
+      flameGroup.position.y = 1.25 + rocketY;
+      flameGroup.scale.y = THREE.MathUtils.lerp(flameGroup.scale.y, targetFlameY, dt * 12);
+      flameGroup.scale.x = THREE.MathUtils.lerp(flameGroup.scale.x, targetFlameXZ, dt * 12);
+      flameGroup.scale.z = THREE.MathUtils.lerp(flameGroup.scale.z, targetFlameXZ, dt * 12);
+
+      flameLight.position.y = 0.7 + rocketY;
+      flameLight.intensity = THREE.MathUtils.lerp(flameLight.intensity, flameIntensity, dt * 12);
+
+      // Smoke particles
+      if (smokePoints) {
+        const sArr = smokePoints.geometry.attributes.position.array;
+        const isAscending = launchPhase === 'liftoff' || launchPhase === 'ascent' || launchPhase === 'cruising';
+
+        for (let i = 0; i < smokeCount; i++) {
+          smokeAges[i] += dt;
+          if (smokeAges[i] >= smokeMaxAges[i]) {
+            smokeAges[i] = 0;
+            if (isThrusting) {
+              const ang = Math.random() * Math.PI * 2;
+              const r = Math.random() * 0.4;
+              sArr[i * 3 + 0] = Math.cos(ang) * r;
+              sArr[i * 3 + 1] = 1.0 + rocketY;
+              sArr[i * 3 + 2] = Math.sin(ang) * r;
+
+              if (isAscending) {
+                smokeVel[i * 3 + 0] = Math.cos(ang) * 0.6;
+                smokeVel[i * 3 + 1] = -4.0 - Math.random() * 3.0;
+                smokeVel[i * 3 + 2] = Math.sin(ang) * 0.6;
+              } else {
+                smokeVel[i * 3 + 0] = Math.cos(ang) * 1.5;
+                smokeVel[i * 3 + 1] = -0.4;
+                smokeVel[i * 3 + 2] = Math.sin(ang) * 1.5;
+              }
+            } else {
+              sArr[i * 3 + 1] = -100;
+            }
+          } else if (sArr[i * 3 + 1] > -50) {
+            sArr[i * 3 + 0] += smokeVel[i * 3 + 0] * dt;
+            sArr[i * 3 + 1] += smokeVel[i * 3 + 1] * dt;
+            sArr[i * 3 + 2] += smokeVel[i * 3 + 2] * dt;
+          }
+        }
+        smokePoints.geometry.attributes.position.needsUpdate = true;
+      }
+
+      // Camera Tracking Ascent
+      const isFlight = launchPhase === 'liftoff' || launchPhase === 'ascent' || launchPhase === 'cruising';
+      if (isFlight) {
+        const desiredLookY = 4.2 + rocketY * 0.75;
+        const desiredPosY = 6.2 + rocketY * 0.78;
+        const dist = 1.0 + Math.min(rocketY * 0.015, 0.4);
+
+        cameraTargetLook.set(0, desiredLookY, 0);
+        cameraTargetPos.set(9.5 * dist, desiredPosY, 11.5 * dist);
+      }
+
+      camera.position.lerp(cameraTargetPos, dt * 3.5);
+      controls.target.lerp(cameraTargetLook, dt * 3.5);
+
+      if (autoRotate && launchPhase === 'standby') {
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.8;
+      } else {
+        controls.autoRotate = false;
+      }
+
+      controls.update();
+      updateTelemetryUI();
+      renderer.render(scene, camera);
+    }
+
+    window.setCameraPreset = setCameraPreset;
+    window.toggleAutoRotate = toggleAutoRotate;
+    window.setThrustMode = setThrustMode;
+
+    animate();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRocketApp);
+  } else {
+    initRocketApp();
+  }
+</script>
+</body>
 </html>
